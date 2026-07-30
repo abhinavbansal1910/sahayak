@@ -1,0 +1,63 @@
+# ──────────────────────────────────────────────────────────────
+# Sahayak .gitignore
+# This file tells Git which files to NEVER upload to GitHub.
+# Rule of thumb: anything machine-specific, huge, or secret → ignore.
+# ──────────────────────────────────────────────────────────────
+
+# ── Python ──
+# Virtual environments are machine-specific & huge — never commit them.
+venv/
+.venv/
+env/
+ENV/
+# Compiled Python files (auto-generated, no value in git).
+__pycache__/
+*.py[cod]
+*$py.class
+# Distribution / packaging.
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# ── Environment & secrets ──
+# The .env file holds API keys & passwords. NEVER commit it.
+.env
+.env.local
+.env.*.local
+
+# ── Docker ──
+# Nothing here for now, but local docker volumes shouldn't be committed.
+.docker/
+
+# ── Databases ──
+*.sqlite3
+*.db
+postgres_data/
+
+# ── Editors / OS ──
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ── Data & models (downloaded artifacts, not source code) ──
+data/raw/
+data/processed/
+*.onnx
+*.pt
+*.bin
+model/artifacts/
+
+# ── Logs ──
+*.log
+logs/
+
+# ── Node (for the Next.js frontend, later) ──
+node_modules/
+.next/
+out/
+
+# ── Jupyter checkpoints ──
+.ipynb_checkpoints/
