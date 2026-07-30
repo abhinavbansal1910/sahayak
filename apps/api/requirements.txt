@@ -1,0 +1,26 @@
+# ──────────────────────────────────────────────────────────────
+# Sahayak API — Python dependencies
+# ──────────────────────────────────────────────────────────────
+# Pinned versions keep our builds reproducible (a recruiter or future-you
+# gets the exact same behaviour). We'll add more (langgraph, LLM SDKs,
+# pdfplumber, torch) as we build later sprints.
+
+# ── Web framework ──
+fastapi==0.115.6
+# ASGI server that actually runs FastAPI (async, production-grade).
+uvicorn[standard]==0.34.0
+
+# ── Settings & validation ──
+# Loads our .env file into typed settings so we don't hardcode secrets.
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-dotenv==1.0.1
+
+# ── Database ──
+# Modern Postgres driver (psycopg3, not the old psycopg2).
+psycopg[binary]==3.2.3
+# SQLAlchemy = the standard Python ORM (we'll use it in Sprint 4).
+SQLAlchemy==2.0.36
+
+# ── HTTP / networking helpers ──
+httpx==0.28.1
