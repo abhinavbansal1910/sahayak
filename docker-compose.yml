@@ -1,0 +1,69 @@
+# ──────────────────────────────────────────────────────────────
+# Sahayak — Docker Compose
+# ──────────────────────────────────────────────────────────────
+# This is the "conductor". One command — `docker compose up` — boots
+# EVERY service the project needs and wires them together.
+#
+# We define two "services":
+#   1. api      → our FastAPI backend (built from apps/api/Dockerfile)
+#   2. postgres → our database
+# They share a private Docker network and can reach each other by name.
+#
+# RUN IT:    docker compose up        (foreground, see logs)
+#            docker compose up -d     (detached, in background)
+# STOP IT:   docker compose down
+# RESET DB:  docker compose down -v   (deletes the saved data)
+
+services:
+  # ─────────────────────────────────────────────────────────────
+  # 1) Our FastAPI backend
+  # ─────────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    container_name: sahayak-api
+    ports:
+      # HOST_PORT : CONTAINER_PORT
+      # Your browser hits localhost:8000 → forwarded into the container's 8000.
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      # Bind-mount our source code so edits on your laptop instantly appear
+      # inside the container. Combined with uvicorn --reload, you get
+      # live code changes without rebuilding the image.
+      - ./apps/api:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─────────────────────────────────────────────────────────────
+  # 2) PostgreSQL database
+  # ─────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: sahayak-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      # Persist data to a named volume so it survives `docker compose down`.
+      # (Named volumes are NOT deleted unless you pass -v.)
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Docker runs this query to know when Postgres is ready to accept
+      # connections. The `api` service waits for this to pass before starting.
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+# Declare the named volume used above.
+volumes:
+  postgres_data:
