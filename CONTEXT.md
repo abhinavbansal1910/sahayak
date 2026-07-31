@@ -111,7 +111,8 @@ Sahayak/
     └── app/
         ├── __init__.py   ← marks folder as a Python package
         ├── config.py     ← reads .env → typed Settings (control panel)
-        └── main.py       ← FastAPI app entry point + endpoints
+        ├── main.py       ← FastAPI app entry point + endpoints
+        └── schemas.py    ← Pydantic data shapes (Clause, ClauseType)
 ```
 
 ---
@@ -223,6 +224,10 @@ If it stops responding, the platform restarts the container. Industry standard.
 
 - OS: Windows (Git Bash terminal)
 - Python: 3.14.5 installed system-wide
+  - ⚠️ Host Python 3.14 is too new for some pinned deps (no prebuilt wheels
+    yet — pydantic-core tries to compile from Rust and fails). RUN PYTHON
+    INSIDE DOCKER instead: `docker compose exec -T api python ...`
+    (the container is Python 3.12, per the Dockerfile).
 - Git: 2.49.0 installed and authenticated
 - Docker Desktop: installed and running
 - Working dir: C:\Users\Abhinav\OneDrive\Desktop\Sahayak
@@ -246,3 +251,7 @@ Don't need these yet — only when we reach the relevant sprint.
 
 - **2026-07-30** — Sprint 0 complete. Project scaffolded, Docker working,
   FastAPI serving `/health`. 5 commits on `main`.
+- **2026-07-31** — Sprint 1 started. Added Pydantic `Clause` / `ClauseType`
+  schema (`app/schemas.py`) — the data shape that flows through the pipeline.
+  Bumped psycopg pin 3.2.3 → 3.2.13 (old version removed from PyPI). Learned
+  host Python 3.14 is too new for pinned wheels → run Python inside Docker.
