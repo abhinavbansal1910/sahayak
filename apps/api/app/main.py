@@ -50,3 +50,11 @@ def health():
     the container booted and FastAPI is serving requests.
     """
     return {"status": "healthy", "version": "0.1.0"}
+@app.get("/about")
+def about():
+    """What this service does, in one line."""
+    return {
+        "name": "Sahayak",
+        "purpose": "A trust-aware legal document agent for Indian contracts.",
+        "pipeline": ["ingestion", "extraction", "risk_scoring", "negotiation", "report"],
+    }
