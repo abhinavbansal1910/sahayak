@@ -18,7 +18,7 @@ python-dotenv==1.0.1
 
 # ── Database ──
 # Modern Postgres driver (psycopg3, not the old psycopg2).
-psycopg[binary]==3.2.3
+psycopg[binary]==3.2.13
 # SQLAlchemy = the standard Python ORM (we'll use it in Sprint 4).
 SQLAlchemy==2.0.36
 
