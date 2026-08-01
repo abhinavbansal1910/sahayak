@@ -8,10 +8,20 @@
 # plumbing works. Real endpoints (analyze a contract, stream agent
 # progress) get added in later sprints.
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agents.graph import run_pipeline
 from app.config import settings
+
+# Surface our agents' log lines in the server output so we can SEE the
+# pipeline run node-by-node (each agent logs when it starts).
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
 
 app = FastAPI(
     title="Sahayak API",
@@ -58,3 +68,15 @@ def about():
         "purpose": "A trust-aware legal document agent for Indian contracts.",
         "pipeline": ["ingestion", "extraction", "risk_scoring", "negotiation", "report"],
     }
+
+
+@app.post("/analyze")
+async def analyze(filename: str = "sample-contract.pdf"):
+    """Run the full agent pipeline on a document.
+
+    Day 1.1: the agents are STUBS — this proves the LangGraph plumbing.
+    A POST here kicks off all 5 nodes in order and returns the final
+    shared State. (Real file upload + ingestion arrive in Day 1.2.)
+    """
+    final_state = run_pipeline(filename)
+    return final_state
