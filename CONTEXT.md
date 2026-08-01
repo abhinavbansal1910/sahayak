@@ -99,6 +99,7 @@ the flow (nodes + edges) of a multi-agent system in code.
 Sahayak/
 ├── CONTEXT.md            ← THIS FILE (living project doc)
 ├── lessons.md            ← study notes (LOCAL ONLY — gitignored, never on GitHub)
+├── roadmap.md            ← daily-sprint project plan (LOCAL ONLY — gitignored)
 ├── .env                  ← REAL secrets (gitignored, NEVER on GitHub)
 ├── .env.example          ← safe template with fake values (on GitHub)
 ├── .gitignore            ← tells Git what to skip (venv, .env, etc.)
@@ -112,8 +113,13 @@ Sahayak/
     └── app/
         ├── __init__.py   ← marks folder as a Python package
         ├── config.py     ← reads .env → typed Settings (control panel)
-        ├── main.py       ← FastAPI app entry point + endpoints
-        └── schemas.py    ← Pydantic data shapes (Clause, ClauseType)
+        ├── main.py       ← FastAPI app entry point + endpoints (/, /health, /about, /analyze)
+        ├── schemas.py    ← Pydantic data shapes (Clause, ClauseType)
+        └── agents/       ← the 5 pipeline agents + LangGraph wiring
+            ├── __init__.py
+            ├── state.py  ← PipelineState (shared memory of all agents)
+            ├── nodes.py  ← the 5 agent node functions
+            └── graph.py  ← wires nodes into a runnable LangGraph
 ```
 
 ---
@@ -256,5 +262,15 @@ Don't need these yet — only when we reach the relevant sprint.
   schema (`app/schemas.py`) — the data shape that flows through the pipeline.
   Bumped psycopg pin 3.2.3 → 3.2.13 (old version removed from PyPI). Learned
   host Python 3.14 is too new for pinned wheels → run Python inside Docker.
+- **2026-08-01** — Day 1.1 (7-day lock-in): LangGraph pipeline skeleton LIVE.
+  Added `app/agents/` (state.py · nodes.py · graph.py) wiring 5 stub nodes
+  end-to-end; `POST /analyze` runs the graph and returns the shared State.
+  Pinned `langgraph==1.2.10`. Verified: all 5 nodes log in order.
 - **2026-08-01** — Docker deep-dive (Lesson 3) covered. Created `lessons.md`,
   a running study + interview-revision guide that grows each lesson.
+- **2026-08-01** — Created `roadmap.md`: a 22-day sprint plan (local-only,
+  gitignored). `lessons.md` Roadmap section now points at it for full detail.
+- **2026-08-01** — Re-planned `roadmap.md` to **7 intensive days (lock-in mode)**:
+  same full scope as the 22-day plan, packed ~3x denser. Operating model — ZCode
+  writes most code/notebooks/configs, Abhinav runs + learns + commits. Milestones:
+  ① backend (Day 5) · ② UI (Day 6) · ③ deploy (Day 7).
