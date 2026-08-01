@@ -98,6 +98,7 @@ the flow (nodes + edges) of a multi-agent system in code.
 ```
 Sahayak/
 ├── CONTEXT.md            ← THIS FILE (living project doc)
+├── lessons.md            ← study notes (LOCAL ONLY — gitignored, never on GitHub)
 ├── .env                  ← REAL secrets (gitignored, NEVER on GitHub)
 ├── .env.example          ← safe template with fake values (on GitHub)
 ├── .gitignore            ← tells Git what to skip (venv, .env, etc.)
@@ -255,3 +256,5 @@ Don't need these yet — only when we reach the relevant sprint.
   schema (`app/schemas.py`) — the data shape that flows through the pipeline.
   Bumped psycopg pin 3.2.3 → 3.2.13 (old version removed from PyPI). Learned
   host Python 3.14 is too new for pinned wheels → run Python inside Docker.
+- **2026-08-01** — Docker deep-dive (Lesson 3) covered. Created `lessons.md`,
+  a running study + interview-revision guide that grows each lesson.

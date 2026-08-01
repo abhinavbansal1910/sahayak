@@ -24,3 +24,8 @@ SQLAlchemy==2.0.36
 
 # ── HTTP / networking helpers ──
 httpx==0.28.1
+
+# ── Agent orchestration ──
+# LangGraph wires our 5 agents into a controllable, observable pipeline
+# (shared State, nodes, edges). The heart of the "agentic AI" layer.
+langgraph==1.2.10
