@@ -62,5 +62,6 @@ out/
 # ── Jupyter checkpoints ──
 .ipynb_checkpoints/
 
-# ── Local-only study notes (personal, NOT for GitHub) ──
+# ── Local-only docs (personal, NOT for GitHub) ──
 lessons.md
+roadmap.md
