@@ -43,7 +43,10 @@ def build_pipeline():
 pipeline = build_pipeline()
 
 
-def run_pipeline(filename: str) -> PipelineState:
+def run_pipeline(filename: str, file_bytes: bytes) -> PipelineState:
     """Kick off the whole pipeline. Returns the final shared State."""
-    initial_state: PipelineState = {"filename": filename}
+    initial_state: PipelineState = {
+        "filename": filename,
+        "file_bytes": file_bytes,  # the actual uploaded document
+    }
     return pipeline.invoke(initial_state)
