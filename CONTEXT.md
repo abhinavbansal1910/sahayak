@@ -35,12 +35,22 @@ project's interview hook and differentiator.
   - Local Python venv for editing
   - Git initialized, 5 clean commits, `.env`/`.gitignore` hygiene
   - Verified: `{"status":"healthy","version":"0.1.0"}` returns at localhost:8000
+- **Sprint 1 — in progress (Day 1 of 7)**
+  - 1.1 ✅ LangGraph skeleton — 5 stub agents wired end-to-end, `POST /analyze`
+    runs the graph and returns the final shared State
+  - 1.2 ✅ REAL Ingestion — `/analyze` accepts actual file uploads
+    (`UploadFile` + multipart). Born-digital PDFs extract via pdfplumber
+    page-by-page; `.txt` passes through; whitespace normalized; near-zero
+    extraction logs a scanned-PDF warning (OCR edge lands in 1.3).
+    Verified end-to-end with a real PDF (a CV) — full text back through
+    all 5 nodes.
 
 ### 🚧 Next Up
-- **Sprint 1 — Ingestion + Extraction agents**
-  - Build the LangGraph skeleton (the agent orchestration framework)
-  - Ingestion Agent: PDF/document → clean text
-  - Extraction Agent: text → individual clauses, classified by type
+- **Sprint 1 (rest) — OCR ingestion + Extraction agent**
+  - 1.3: OCR fallback for scanned PDFs — our first **conditional edge**
+    (low text → OCR route), via pytesseract + Tesseract in Docker
+  - 2.1: Extraction Agent — text → typed clauses (Gemini + Pydantic validation)
+  - 2.2: wire-up — real PDF → clauses JSON end-to-end *(Phase-1 demo)*
 
 ### ⬜ Roadmap
 - Sprint 2 — Fine-tuned risk classifier (the heart, LegalBERT + LoRA on Colab)
@@ -118,7 +128,7 @@ Sahayak/
         └── agents/       ← the 5 pipeline agents + LangGraph wiring
             ├── __init__.py
             ├── state.py  ← PipelineState (shared memory of all agents)
-            ├── nodes.py  ← the 5 agent node functions
+            ├── nodes.py  ← the 5 agent node functions (ingestion REAL, 4 stubs)
             └── graph.py  ← wires nodes into a runnable LangGraph
 ```
 
@@ -274,3 +284,13 @@ Don't need these yet — only when we reach the relevant sprint.
   same full scope as the 22-day plan, packed ~3x denser. Operating model — ZCode
   writes most code/notebooks/configs, Abhinav runs + learns + commits. Milestones:
   ① backend (Day 5) · ② UI (Day 6) · ③ deploy (Day 7).
+- **2026-08-15** — **Day 1.2 done: the Ingestion agent is REAL.** `/analyze` now
+  accepts actual file uploads (`UploadFile` + multipart/form-data; pinned
+  `python-multipart==0.0.20` + `pdfplumber==0.11.4`). Born-digital PDFs extract
+  via pdfplumber page-by-page, `.txt` passes through, whitespace normalized,
+  unsupported types fail fast with a clean 400. Near-zero extraction logs a
+  scanned-PDF warning — becomes a conditional OCR edge in 1.3. **War story:**
+  returning the raw pipeline State 500'd on PDFs (`bytes` aren't JSON —
+  UnicodeDecodeError in FastAPI's encoder; `.txt` masked it). Fix: pop
+  `file_bytes` from the response — internal state ≠ API contract. Verified:
+  real CV PDF → full text back through all 5 nodes. Lesson 5 added to lessons.md.
