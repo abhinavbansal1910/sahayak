@@ -29,3 +29,10 @@ httpx==0.28.1
 # LangGraph wires our 5 agents into a controllable, observable pipeline
 # (shared State, nodes, edges). The heart of the "agentic AI" layer.
 langgraph==1.2.10
+
+# ── File upload & PDF ingestion (Day 1.2) ──
+# Parses multipart/form-data — FastAPI REQUIRES it for UploadFile to work
+# (classic gotcha: without it, uploads crash at runtime, not at import).
+python-multipart==0.0.20
+# Extracts the text layer from born-digital PDFs, page by page.
+pdfplumber==0.11.4
