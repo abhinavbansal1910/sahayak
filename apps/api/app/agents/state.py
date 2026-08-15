@@ -23,6 +23,7 @@ class PipelineState(TypedDict, total=False):
 
     # ── Input ──
     filename: str  # name of the uploaded document
+    file_bytes: bytes  # the raw uploaded bytes (a PDF, or plain text)
 
     # ── Ingestion output (Day 1.2) ──
     raw_text: str  # the full clean text extracted from the PDF
