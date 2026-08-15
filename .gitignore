@@ -65,3 +65,7 @@ out/
 # ── Local-only docs (personal, NOT for GitHub) ──
 lessons.md
 roadmap.md
+
+# -- Test files --
+test-contract.txt
+
