@@ -10,7 +10,7 @@
 
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.agents.graph import run_pipeline
@@ -71,12 +71,28 @@ def about():
 
 
 @app.post("/analyze")
-async def analyze(filename: str = "sample-contract.pdf"):
-    """Run the full agent pipeline on a document.
+async def analyze(file: UploadFile = File(...)):
+    """Run the full agent pipeline on an uploaded document.
 
-    Day 1.1: the agents are STUBS — this proves the LangGraph plumbing.
-    A POST here kicks off all 5 nodes in order and returns the final
-    shared State. (Real file upload + ingestion arrive in Day 1.2.)
+    Send a born-digital .pdf (or .txt) as multipart form field `file`.
+    Day 1.2: ingestion is REAL — `raw_text` in the response is the
+    actual extracted text. The remaining agents are still stubs.
     """
-    final_state = run_pipeline(filename)
+    file_bytes = await file.read()
+
+    try:
+        final_state = run_pipeline(
+            filename=file.filename or "document",
+            file_bytes=file_bytes,
+        )
+    except ValueError as exc:
+        # Bad input (e.g. unsupported file type) → a clean 400,
+        # not an ugly 500. Errors at the boundary, in plain language.
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    # Never echo `file_bytes` back: raw PDF bytes are BINARY, JSON is
+    # text-only — FastAPI would try to UTF-8-decode them and 500 (today's
+    # war story). Internal state ≠ API response; return only the analysis.
+    final_state.pop("file_bytes", None)
+
     return final_state
