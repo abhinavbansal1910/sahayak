@@ -14,14 +14,18 @@ The person handing you a contract had lawyers write it to protect *them*. You si
 
 ```
 [Ingestion] → [Extraction] → [Risk Scoring] ⭐ → [Negotiation] → [Report]
-   PDF→text     clause split     fine-tuned       draft fair       asymmetry
-                                  classifier       counter-         report +
-                                                   clauses          counter-draft
+   PDF→text     clause split     RAG-grounded     draft fair       asymmetry
+                (OCR fallback)   LLM judge        counter-         report +
+                                                  clauses          counter-draft
 ```
 
-- **Risk Scoring** uses a *fine-tuned* **InLegalBERT** (an Indian legal language model) — not just a prompt.
-- Every clause gets an **Asymmetry Score** (−100 favors them … 0 fair … +100 favors you).
-- The Report Agent produces a ranked, quantified breakdown + suggested fixes.
+- **Risk Scoring** is a **RAG-grounded LLM judge**: Gemini judges each clause
+  (temperature 0, JSON-validated) with the 3 most similar *labeled* clauses
+  from our India-specific knowledge base retrieved as grounding.
+- Every clause gets an **Asymmetry Score** (−100 favors them … 0 fair … +100 favors you)
+  = direction × confidence × 100.
+- The Report Agent produces a ranked, quantified breakdown + suggested fixes;
+  the Negotiation Agent drafts a balanced rewrite of every lopsided clause.
 
 ## Tech stack
 
@@ -29,7 +33,8 @@ The person handing you a contract had lawyers write it to protect *them*. You si
 |---|---|
 | Agent orchestration | LangGraph |
 | Reasoning LLM | Gemini Flash + Groq (free tiers) |
-| Risk classifier | Fine-tuned InLegalBERT — Indian legal BERT (trained on free Colab T4) |
+| Risk scorer | LLM + RAG judge over a labeled Indian-clause knowledge base (embeddings + cosine retrieval; pgvector in prod) |
+| Comparison track | LoRA fine-tune of InLegalBERT (optional Colab notebook in `model/`) |
 | Backend | FastAPI, Pydantic v2, SQLAlchemy 2.0 |
 | Database | PostgreSQL + pgvector (Neon in prod) |
 | Frontend | Next.js 15, Tailwind, shadcn/ui |
@@ -45,9 +50,9 @@ The person handing you a contract had lawyers write it to protect *them*. You si
 - [x] LangGraph pipeline skeleton (5 agents, shared State)
 - [x] Ingestion agent — born-digital PDFs + OCR fallback for scans (conditional edge)
 - [x] Extraction agent — Gemini splits documents into typed, validated clauses
-- [ ] Fine-tuned risk classifier
-- [ ] Risk asymmetry engine
-- [ ] Negotiation agent
+- [x] Risk asymmetry engine — RAG-grounded LLM judge scores every clause −100…+100
+- [x] Negotiation agent — balanced counter-drafts for lopsided clauses (Groq fallback)
+- [x] Report agent — ranked, quantified report + disclaimer
 - [ ] Frontend dashboard
 
 ## Getting started (local dev)
