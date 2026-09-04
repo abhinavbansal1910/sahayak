@@ -36,3 +36,10 @@ langgraph==1.2.10
 python-multipart==0.0.20
 # Extracts the text layer from born-digital PDFs, page by page.
 pdfplumber==0.11.4
+
+# ── OCR fallback for scanned PDFs (Day 1.3) ──
+# Thin wrapper that shells out to the Tesseract binary — a SYSTEM dep,
+# installed via apt in the Dockerfile (not here; pip can't provide it).
+pytesseract==0.3.13
+# Renders PDF pages into bitmap images — OCR reads pictures, not text layers.
+pypdfium2==4.30.0

@@ -15,6 +15,17 @@ ENV PYTHONUNBUFFERED=1 \
 # Set the working directory inside the container (like `cd /app`).
 WORKDIR /app
 
+# ── SYSTEM dependency (Day 1.3): the Tesseract OCR engine ──
+# pytesseract (pip) is only a thin WRAPPER — at runtime it shells out to
+# this OS-level binary. System deps install via apt, NOT pip.
+# fonts-dejavu-core lets our test fixture draw text onto images.
+# Placed with the rarely-changing layers so rebuilds stay cached.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        tesseract-ocr \
+        fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install dependencies FIRST (this layer is cached — if requirements.txt
 # doesn't change, Docker reuses it, making rebuilds fast).
 COPY requirements.txt .

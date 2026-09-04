@@ -27,6 +27,7 @@ class PipelineState(TypedDict, total=False):
 
     # ── Ingestion output (Day 1.2) ──
     raw_text: str  # the full clean text extracted from the PDF
+    used_ocr: bool  # True when the OCR fallback ran (scanned PDF, Day 1.3)
 
     # ── Extraction output (Day 2.1) ──
     clauses: list[Clause]  # the document, split into typed clauses

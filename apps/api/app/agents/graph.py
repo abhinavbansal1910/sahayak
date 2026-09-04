@@ -1,14 +1,12 @@
 # ──────────────────────────────────────────────────────────────
-# Sahayak — The LangGraph (wiring the 5 agents together)
+# Sahayak — The LangGraph (wiring the agents together)
 # ──────────────────────────────────────────────────────────────
 # This is the flowchart. We:
 #   1. create a graph bound to our PipelineState,
 #   2. add each agent as a NODE,
-#   3. add EDGES between them (the order data flows),
+#   3. add EDGES between them (the order data flows) — including our
+#      first CONDITIONAL edge (scanned PDF → OCR detour, Day 1.3),
 #   4. compile it into something we can `.invoke()`.
-#
-# Later we'll add CONDITIONAL edges (e.g. low-text -> OCR fallback,
-# risky clause -> negotiate harder). For now it's a straight line.
 
 from langgraph.graph import START, END, StateGraph
 
@@ -17,20 +15,31 @@ from app.agents.state import PipelineState
 
 
 def build_pipeline():
-    """Wire the 5 agents into a linear pipeline and compile it."""
+    """Wire the agents into a pipeline (with one branch) and compile it."""
     graph = StateGraph(PipelineState)
 
     # ── Nodes: register each agent as a named step ──
     graph.add_node("ingestion", nodes.ingestion_node)
+    graph.add_node("ocr", nodes.ocr_node)  # the FALLBACK path (Day 1.3)
     graph.add_node("extraction", nodes.extraction_node)
     graph.add_node("risk_scoring", nodes.risk_node)
     graph.add_node("negotiation", nodes.negotiation_node)
     graph.add_node("report", nodes.report_node)
 
     # ── Edges: the order data flows ──
-    # START -> ingestion -> extraction -> risk -> negotiation -> report -> END
     graph.add_edge(START, "ingestion")
-    graph.add_edge("ingestion", "extraction")
+
+    # CONDITIONAL edge (Day 1.3): after ingestion, a router function
+    # INSPECTS the state and picks the next node:
+    #   scanned PDF (no text layer) → 'ocr' detour
+    #   real text extracted         → straight to 'extraction'
+    graph.add_conditional_edges(
+        "ingestion",
+        nodes.route_after_ingestion,
+        {"ocr": "ocr", "extraction": "extraction"},
+    )
+    graph.add_edge("ocr", "extraction")  # OCR rejoins the main path
+
     graph.add_edge("extraction", "risk_scoring")
     graph.add_edge("risk_scoring", "negotiation")
     graph.add_edge("negotiation", "report")

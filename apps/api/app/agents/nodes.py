@@ -1,27 +1,34 @@
 # ──────────────────────────────────────────────────────────────
-# Sahayak — Pipeline nodes (the 5 agents)
+# Sahayak — Pipeline nodes (the agents)
 # ──────────────────────────────────────────────────────────────
 # Each agent is a NODE: a function that takes the shared State, does its
 # job, and returns a dict of JUST the keys it changed. LangGraph merges
 # that into the running State.
 #
-# Day 1.2: ingestion is REAL (document → clean text). The other four
-# are still stubs — each goes real in its own unit.
+# Day 1.2: ingestion is REAL (document → clean text).
+# Day 1.3: OCR fallback is REAL — scanned PDFs detour through ocr_node,
+#          routed by our first CONDITIONAL edge (see graph.py).
+# The rest are still stubs — each goes real in its own unit.
 
 import io
 import logging
 import re
 
 import pdfplumber
+import pypdfium2 as pdfium
+import pytesseract
 
 from app.agents.state import PipelineState
 
 logger = logging.getLogger(__name__)
 
-# A real contract page holds ~2,000+ characters. Below this total we
-# suspect the PDF is a SCAN (image-only, no text layer). Day 1.3 turns
-# this warning into a conditional edge that routes to OCR.
+# A real contract page holds ~2,000+ characters. Below this total from a
+# PDF we conclude there is NO text layer (it's a scan) and route to OCR.
 MIN_TEXT_CHARS = 50
+
+# PDF pages render natively at 72 DPI; OCR wants ~300. scale=4 upsamples
+# each page 4x (288 DPI) — big, crisp glyphs for Tesseract to read.
+OCR_RENDER_SCALE = 4
 
 
 def _extract_pdf_text(file_bytes: bytes) -> str:
@@ -33,8 +40,28 @@ def _extract_pdf_text(file_bytes: bytes) -> str:
     return "\n".join(pages)
 
 
+def _ocr_pdf_text(file_bytes: bytes) -> str:
+    """READ an image-only PDF: render pages to pictures, then OCR them.
+
+    There are no glyphs to extract here — so we RENDER each page into a
+    bitmap (pypdfium2 draws it, like a screenshot) and let Tesseract read
+    the picture. Slower and less accurate than a text layer, but it's the
+    only path that works on scans and phone photos.
+    """
+    pdf = pdfium.PdfDocument(io.BytesIO(file_bytes))
+    try:
+        pages = []
+        for page in pdf:
+            image = page.render(scale=OCR_RENDER_SCALE).to_pil()
+            pages.append(pytesseract.image_to_string(image))
+            page.close()  # release each page's memory as we go
+    finally:
+        pdf.close()
+    return "\n".join(pages)
+
+
 def _normalize_whitespace(text: str) -> str:
-    """Clean up PDF extraction junk so the next agent gets tidy text.
+    """Clean up extraction junk so the next agent gets tidy text.
 
     PDFs place glyphs by COORDINATES, not spaces — extraction spits out
     runs of spaces, tabs, and blank lines. We collapse them, because
@@ -47,7 +74,12 @@ def _normalize_whitespace(text: str) -> str:
 
 
 def ingestion_node(state: PipelineState) -> dict:
-    """Uploaded document → clean text, written into State['raw_text']."""
+    """Uploaded document → best-effort text layer, into State['raw_text'].
+
+    Note: for a scanned PDF this yields (almost) NOTHING — and that's the
+    SIGNAL. Detecting the scan and routing to OCR is the router's job
+    (route_after_ingestion), not this node's.
+    """
     filename = state.get("filename", "document")
     file_bytes = state.get("file_bytes", b"")
 
@@ -64,19 +96,42 @@ def ingestion_node(state: PipelineState) -> dict:
         raise ValueError(f"Unsupported file type '{filename}'. Upload a .pdf or .txt file.")
 
     raw_text = _normalize_whitespace(raw_text)
-
-    # Scanned-PDF detector: near-zero text from a PDF means no text layer.
-    if lower.endswith(".pdf") and len(raw_text) < MIN_TEXT_CHARS:
-        logger.warning(
-            "ingestion: only %d chars from a %d-byte PDF — '%s' looks like a "
-            "SCANNED document (no text layer). OCR fallback arrives in Day 1.3.",
-            len(raw_text),
-            len(file_bytes),
-            filename,
-        )
-
     logger.info("ingestion: extracted %d characters of text", len(raw_text))
     return {"raw_text": raw_text}
+
+
+def ocr_node(state: PipelineState) -> dict:
+    """OCR fallback agent: image-only PDF → text (the detour path).
+
+    Sits OFF the main line — the conditional edge only routes here when
+    ingestion found (almost) no text. Overwrites raw_text with what
+    Tesseract managed to read, and flags the run with `used_ocr`.
+    """
+    filename = state.get("filename", "document")
+    file_bytes = state.get("file_bytes", b"")
+    logger.info("▶ ocr_node       | Tesseract reading '%s' (image-only)", filename)
+
+    raw_text = _normalize_whitespace(_ocr_pdf_text(file_bytes))
+    logger.info("ocr: recovered %d characters via OCR", len(raw_text))
+    return {"raw_text": raw_text, "used_ocr": True}
+
+
+def route_after_ingestion(state: PipelineState) -> str:
+    """CONDITIONAL EDGE: inspect the State, return the next node's NAME.
+
+    - 'ocr'        → near-zero text ⇒ scanned PDF, needs Tesseract
+    - 'extraction' → real text in hand ⇒ carry on down the main path
+    """
+    filename = state.get("filename", "").lower()
+    raw_text = state.get("raw_text", "")
+    if filename.endswith(".pdf") and len(raw_text) < MIN_TEXT_CHARS:
+        logger.warning(
+            "router: only %d chars from '%s' — looks SCANNED, routing to OCR",
+            len(raw_text),
+            state.get("filename"),
+        )
+        return "ocr"
+    return "extraction"
 
 
 def extraction_node(state: PipelineState) -> dict:
