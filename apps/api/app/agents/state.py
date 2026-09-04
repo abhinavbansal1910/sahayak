@@ -33,7 +33,8 @@ class PipelineState(TypedDict, total=False):
     clauses: list[Clause]  # the document, split into typed clauses
 
     # ── Risk scoring / asymmetry output (Day 4) ──
-    scored_clauses: list[dict]  # each clause + its asymmetry score
+    scored_clauses: list[dict]  # each clause + direction/confidence/asymmetry
+    negotiated_clauses: list[dict]  # counter-drafts for the worst clauses
 
     # ── Report output (Day 5) ──
     report: dict  # the final assembled report + counter-draft

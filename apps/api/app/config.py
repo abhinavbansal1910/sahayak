@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     # (Gemini 2.5-flash was retired for new users; the API's 404 message
     # pointed us at 3.6-flash. Models rotate — this knob absorbs that.)
     gemini_model: str = "gemini-3.6-flash"
+    # Embeddings power the RAG knowledge base (labeled clauses).
+    gemini_embedding_model: str = "gemini-embedding-001"
+    # How many similar labeled clauses to retrieve as few-shot exemplars.
+    rag_top_k: int = 3
+    # Groq fallback (OpenAI-compatible REST) for when Gemini rate-limits.
+    groq_api_key: str = ""
+    groq_model: str = "llama-3.3-70b-versatile"
 
 
 # @lru_cache means: build the Settings object ONCE, then reuse the same one.

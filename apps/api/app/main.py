@@ -75,8 +75,8 @@ async def analyze(file: UploadFile = File(...)):
     """Run the full agent pipeline on an uploaded document.
 
     Send a born-digital .pdf (or .txt) as multipart form field `file`.
-    Day 1.2: ingestion is REAL — `raw_text` in the response is the
-    actual extracted text. The remaining agents are still stubs.
+    Returns scored clauses (−100…+100 asymmetry), counter-drafts for the
+    worst ones, and a summary report.
     """
     file_bytes = await file.read()
 
@@ -89,6 +89,15 @@ async def analyze(file: UploadFile = File(...)):
         # Bad input (e.g. unsupported file type) → a clean 400,
         # not an ugly 500. Errors at the boundary, in plain language.
         raise HTTPException(status_code=400, detail=str(exc))
+    except Exception as exc:
+        # Upstream failure (LLM outage / quota) → a clean 502 naming the
+        # culprit, never an empty body or a mystery 500.
+        logging.error("pipeline failed: %s", str(exc)[:300])
+        raise HTTPException(
+            status_code=502,
+            detail="Analysis pipeline failed — the LLM provider is likely "
+                   "unavailable or rate-limited. Try again in a minute.",
+        )
 
     # Never echo `file_bytes` back: raw PDF bytes are BINARY, JSON is
     # text-only — FastAPI would try to UTF-8-decode them and 500 (today's

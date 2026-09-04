@@ -31,6 +31,21 @@ class ClauseType(str, Enum):
 # A clause is one numbered paragraph in a contract. By the END of the
 # pipeline, each clause will ALSO carry a risk score + a counter-draft.
 # For Sprint 1 (extraction) we start small: just text + type + position.
+# ── Risk verdict (Day 4: LLM+RAG judge output) ──
+# The judge says WHO the clause favors; the asymmetry engine turns that
+# into the −100…+100 score: direction sign × confidence × 100.
+class RiskDirection(str, Enum):
+    favors_them = "favors_them"    # lopsided toward the other party → negative
+    balanced = "balanced"          # roughly even → ~0
+    favors_you = "favors_you"      # lopsided toward OUR reader → positive
+
+
+class RiskVerdict(BaseModel):
+    direction: RiskDirection = Field(..., description="Who this clause favors.")
+    confidence: float = Field(..., ge=0, le=1, description="Judge's certainty, 0-1.")
+    reason: str = Field(default="", description="One-sentence plain-English justification.")
+
+
 class Clause(BaseModel):
     # str            → must be text.
     # Field(..., ...) → the "..." means REQUIRED (no default given).
