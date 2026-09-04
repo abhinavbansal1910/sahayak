@@ -16,6 +16,7 @@ underperforms: `nlpaueb/legal-bert-base-uncased`.)
 
 ```
 model/
+├── finetune_risk_classifier.ipynb  ← Colab notebook: InLegalBERT + LoRA, train→eval→push
 ├── prepare_dataset.py      ← builds the labeled dataset (stdlib only)
 ├── data/
 │   ├── train.jsonl         ← 80% — one {"text", "label"} per line
