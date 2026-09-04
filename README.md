@@ -44,7 +44,7 @@ The person handing you a contract had lawyers write it to protect *them*. You si
 - [x] Health endpoint
 - [x] LangGraph pipeline skeleton (5 agents, shared State)
 - [x] Ingestion agent — born-digital PDFs + OCR fallback for scans (conditional edge)
-- [ ] Extraction agent
+- [x] Extraction agent — Gemini splits documents into typed, validated clauses
 - [ ] Fine-tuned risk classifier
 - [ ] Risk asymmetry engine
 - [ ] Negotiation agent
