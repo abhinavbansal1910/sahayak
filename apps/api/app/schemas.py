@@ -22,6 +22,7 @@ class ClauseType(str, Enum):
     payment = "payment"
     liability = "liability"
     confidentiality = "confidentiality"
+    intellectual_property = "intellectual_property"
     governing_law = "governing_law"
     other = "other"
 

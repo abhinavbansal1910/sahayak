@@ -11,14 +11,19 @@
 # The rest are still stubs — each goes real in its own unit.
 
 import io
+import json
 import logging
 import re
 
 import pdfplumber
 import pypdfium2 as pdfium
 import pytesseract
+from google import genai
+from google.genai import types as genai_types
 
 from app.agents.state import PipelineState
+from app.config import settings
+from app.schemas import Clause, ClauseType
 
 logger = logging.getLogger(__name__)
 
@@ -134,10 +139,124 @@ def route_after_ingestion(state: PipelineState) -> str:
     return "extraction"
 
 
+# ── Extraction (Day 2.1): text → typed clauses via Gemini ──
+# The prompt has two jobs: SPLIT (find clause boundaries) and TYPE (label
+# each one). We demand VERBATIM text — paraphrasing here would poison
+# everything downstream (risk scores and counter-drafts quote this text).
+
+EXTRACTION_PROMPT = """You are a legal-document analyst reviewing Indian \
+contracts for a gig worker. Split the document below into its individual \
+clauses.
+
+Return ONLY a JSON array. Each element is an object with EXACTLY these keys:
+  "text": the clause's FULL original wording, copied VERBATIM (include its \
+number/heading)
+  "clause_type": one of: {types}
+
+Rules:
+- One clause per numbered/heading section. Unnumbered substantive paragraphs \
+each count as a clause.
+- Never paraphrase, summarize, or invent clauses.
+- If the type is unclear, use "other".
+
+DOCUMENT:
+{document}"""
+
+# Safety valve: documents longer than this get truncated before the LLM.
+# Gemini's context is huge, but latency + token cost are not free.
+EXTRACTION_MAX_CHARS = 60_000
+
+# Lazily-created Gemini client (built on first use, then reused).
+_gemini_client: genai.Client | None = None
+
+
+def _get_gemini_client() -> genai.Client:
+    """Build the Gemini client once; fail with an ACTIONABLE error if the
+    API key is missing (ValueError → clean 400, not a cryptic 500)."""
+    global _gemini_client
+    if _gemini_client is None:
+        if not settings.gemini_api_key:
+            raise ValueError(
+                "GEMINI_API_KEY is not set. Add it to .env (free key: "
+                "https://aistudio.google.com/) and restart the API."
+            )
+        _gemini_client = genai.Client(api_key=settings.gemini_api_key)
+    return _gemini_client
+
+
+def _parse_clauses_json(payload: str) -> list[Clause]:
+    """UNTRUSTED LLM output → validated list[Clause].
+
+    The LLM is a probability machine, not a function: it can return
+    broken JSON, missing fields, or nonsense types. The boundary policy:
+      - unparseable JSON → ValueError (loud, immediate — the Pydantic lesson)
+      - malformed item   → dropped with a warning (its text is garbage anyway)
+      - unknown type     → coerced to 'other' (keep the text, lose nothing)
+      - indexes          → reassigned 0..n-1 by US, never trusted from the LLM
+    """
+    data = json.loads(payload)  # may raise — a loud failure here is correct
+    if not isinstance(data, list):
+        raise ValueError(f"LLM returned {type(data).__name__}, expected a JSON array.")
+
+    clauses: list[Clause] = []
+    for i, item in enumerate(data):
+        if not isinstance(item, dict) or not str(item.get("text", "")).strip():
+            logger.warning("extraction: dropping malformed clause #%d: %r", i, item)
+            continue
+        try:
+            clause_type = ClauseType(item.get("clause_type", "other"))
+        except ValueError:
+            logger.warning(
+                "extraction: unknown clause_type %r — coercing to 'other'",
+                item.get("clause_type"),
+            )
+            clause_type = ClauseType.other
+        clauses.append(
+            Clause(
+                text=str(item["text"]).strip(),
+                clause_type=clause_type,
+                index=len(clauses),
+            )
+        )
+    return clauses
+
+
 def extraction_node(state: PipelineState) -> dict:
-    """Text -> typed clauses. (Stub; real impl in Day 2.1.)"""
-    logger.info("▶ extraction_node | splitting text into clauses")
-    return {"clauses": []}
+    """Text → typed clauses via Gemini, validated against our Pydantic schema."""
+    raw_text = state.get("raw_text", "")
+    logger.info("▶ extraction_node | splitting %d chars into typed clauses", len(raw_text))
+
+    if not raw_text.strip():
+        logger.warning("extraction: no text to split — returning zero clauses")
+        return {"clauses": []}
+
+    document = raw_text[:EXTRACTION_MAX_CHARS]
+    if len(raw_text) > EXTRACTION_MAX_CHARS:
+        logger.warning(
+            "extraction: truncated document to %d chars for the LLM", EXTRACTION_MAX_CHARS
+        )
+
+    prompt = EXTRACTION_PROMPT.format(
+        types=", ".join(t.value for t in ClauseType),
+        document=document,
+    )
+    response = _get_gemini_client().models.generate_content(
+        model=settings.gemini_model,
+        contents=prompt,
+        config=genai_types.GenerateContentConfig(
+            response_mime_type="application/json",  # force syntactically-valid JSON
+            temperature=0.0,                        # legal parsing wants determinism
+        ),
+    )
+
+    clauses = _parse_clauses_json(response.text or "[]")
+    kinds = sorted({c.clause_type.value for c in clauses})
+    logger.info(
+        "extraction: %d clauses validated | types: %s",
+        len(clauses),
+        ", ".join(kinds) or "none",
+    )
+    return {"clauses": clauses}
 
 
 def risk_node(state: PipelineState) -> dict:

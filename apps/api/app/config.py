@@ -34,6 +34,12 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     groq_api_key: str = ""
 
+    # ── LLM knobs ──
+    # Which Gemini model to call — override in .env without a code change.
+    # (Gemini 2.5-flash was retired for new users; the API's 404 message
+    # pointed us at 3.6-flash. Models rotate — this knob absorbs that.)
+    gemini_model: str = "gemini-3.6-flash"
+
 
 # @lru_cache means: build the Settings object ONCE, then reuse the same one.
 # Creating it reads the .env file — we don't want to do that on every request.

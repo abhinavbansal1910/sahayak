@@ -66,7 +66,7 @@ def about():
     return {
         "name": "Sahayak",
         "purpose": "A trust-aware legal document agent for Indian contracts.",
-        "pipeline": ["ingestion", "extraction", "risk_scoring", "negotiation", "report"],
+        "pipeline": ["ingestion", "ocr (fallback)", "extraction", "risk_scoring", "negotiation", "report"],
     }
 
 

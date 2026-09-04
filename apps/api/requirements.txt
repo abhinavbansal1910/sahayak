@@ -12,8 +12,9 @@ uvicorn[standard]==0.34.0
 
 # ── Settings & validation ──
 # Loads our .env file into typed settings so we don't hardcode secrets.
-pydantic==2.10.4
-pydantic-settings==2.7.1
+# (Bumped 2.10.4 → 2.13.5 on Day 2.1: google-genai requires pydantic>=2.12.5.)
+pydantic==2.13.5
+pydantic-settings==2.15.0
 python-dotenv==1.0.1
 
 # ── Database ──
@@ -43,3 +44,7 @@ pdfplumber==0.11.4
 pytesseract==0.3.13
 # Renders PDF pages into bitmap images — OCR reads pictures, not text layers.
 pypdfium2==4.30.0
+
+# ── LLM APIs (Day 2.1) ──
+# Official Google Gemini SDK — the Extraction agent's brain.
+google-genai==2.22.0
