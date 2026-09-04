@@ -37,12 +37,13 @@ The person handing you a contract had lawyers write it to protect *them*. You si
 
 ## Project status
 
-🚧 **Sprint 0 — Foundation (in progress)**
+🚧 **Sprint 1 — Pipeline skeleton + full Ingestion (complete)**
 
 - [x] Monorepo structure
 - [x] Docker setup (FastAPI + Postgres)
 - [x] Health endpoint
-- [ ] Ingestion agent
+- [x] LangGraph pipeline skeleton (5 agents, shared State)
+- [x] Ingestion agent — born-digital PDFs + OCR fallback for scans (conditional edge)
 - [ ] Extraction agent
 - [ ] Fine-tuned risk classifier
 - [ ] Risk asymmetry engine

@@ -29,6 +29,8 @@ dist/
 # ── Docker ──
 # Nothing here for now, but local docker volumes shouldn't be committed.
 .docker/
++
+
 
 # ── Databases ──
 *.sqlite3
@@ -64,7 +66,15 @@ out/
 
 # ── Local-only docs (personal, NOT for GitHub) ──
 lessons.md
+lessons
+lessons.*
 roadmap.md
+roadmap
+roadmap.*
+CONTEXT.md
+context.md
+context
+context.*
 
 # -- Test files --
 test-contract.txt
