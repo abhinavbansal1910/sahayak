@@ -2,6 +2,16 @@
 
 Everything for the **risk classifier** (the pipeline's differentiator).
 
+## Base model — InLegalBERT (India-first 🇮🇳)
+
+We fine-tune **[`law-ai/InLegalBERT`](https://huggingface.co/law-ai/InLegalBERT)** —
+BERT-base pretrained on **5.4M Indian legal documents** (Supreme Court +
+High Courts). Chosen over generic LegalBERT because Sahayak reads *Indian*
+contracts: Indian legalese, Indian statutes, Indian English. Research shows
+InLegalBERT significantly beats LegalBERT on Indian legal tasks. Same
+architecture → drop-in swap in the Colab notebook. (Fallback if training
+underperforms: `nlpaueb/legal-bert-base-uncased`.)
+
 ## Layout
 
 ```
@@ -9,9 +19,23 @@ model/
 ├── prepare_dataset.py      ← builds the labeled dataset (stdlib only)
 ├── data/
 │   ├── train.jsonl         ← 80% — one {"text", "label"} per line
-│   └── val.jsonl           ← 20% — stratified, same class mix as train
+│   ├── val.jsonl           ← 20% — stratified, same class mix as train
+│   └── raw/                ← external datasets (gitignored) — e.g. Kaggle
+│                              "Legal Indian Contract Clauses" for volume
 └── artifacts/              ← trained LoRA adapter + metrics (gitignored)
 ```
+
+## Dataset strategy (India-first)
+
+1. **Seed set (primary, shipped):** `prepare_dataset.py` — 73 hand-curated,
+   India-native clauses (Rs. amounts, Indian jurisdiction, gig-platform
+   terms). Clean, balanced, stratified.
+2. **Volume upgrade:** Kaggle *Legal Indian Contract Clauses* dataset —
+   drop the download into `model/data/raw/`, then an adapter script maps
+   its labels onto our 3 classes.
+3. **Optional augmentation:** CUAD (US contracts) — off-mission as a primary
+   source; only if we need more volume.
+
 
 ## Label schema (3 classes — DIRECTION of favor)
 

@@ -19,7 +19,7 @@ The person handing you a contract had lawyers write it to protect *them*. You si
                                                    clauses          counter-draft
 ```
 
-- **Risk Scoring** uses a *fine-tuned* LegalBERT classifier — not just a prompt.
+- **Risk Scoring** uses a *fine-tuned* **InLegalBERT** (an Indian legal language model) — not just a prompt.
 - Every clause gets an **Asymmetry Score** (−100 favors them … 0 fair … +100 favors you).
 - The Report Agent produces a ranked, quantified breakdown + suggested fixes.
 
@@ -29,7 +29,7 @@ The person handing you a contract had lawyers write it to protect *them*. You si
 |---|---|
 | Agent orchestration | LangGraph |
 | Reasoning LLM | Gemini Flash + Groq (free tiers) |
-| Risk classifier | Fine-tuned LegalBERT (trained on free Colab T4) |
+| Risk classifier | Fine-tuned InLegalBERT — Indian legal BERT (trained on free Colab T4) |
 | Backend | FastAPI, Pydantic v2, SQLAlchemy 2.0 |
 | Database | PostgreSQL + pgvector (Neon in prod) |
 | Frontend | Next.js 15, Tailwind, shadcn/ui |
