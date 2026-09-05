@@ -331,32 +331,69 @@ CLAUSE (direction={direction}, asymmetry={asymmetry}):
 {clause}"""
 
 
-def _gemini_json(prompt: str, attempts: int = 3) -> str:
-    """One Gemini call forcing JSON-mode output. Shared by judge+negotiator.
-    Retries transient blips (503 "high demand") with a short backoff — but
-    quota errors (429) fail FAST: sleeping 54s inside a request is worse
-    than bubbling up to the caller's fallback (Groq / neutral verdict)."""
-    delay = 2.0
-    for attempt in range(1, attempts + 1):
-        try:
-            response = _get_gemini_client().models.generate_content(
-                model=settings.gemini_model,
-                contents=prompt,
-                config=genai_types.GenerateContentConfig(
-                    response_mime_type="application/json",
-                    temperature=0.0,
-                ),
-            )
-            return response.text or ""
-        except Exception as exc:
-            exhausted = attempt == attempts
-            quota_hit = "429" in str(exc) or "RESOURCE_EXHAUSTED" in str(exc)
-            if exhausted or quota_hit:
-                raise
-            logger.warning("gemini: attempt %d/%d failed — retrying in %.0fs (%s)",
-                           attempt, attempts, delay, str(exc)[:80])
-            time.sleep(delay)
-            delay *= 2.5
+_active_model: str | None = None
+
+
+def _gemini_model_chain() -> list[str]:
+    """Primary model first, then capacity fallbacks (newest → proven)."""
+    fallbacks = [m.strip() for m in settings.gemini_fallback_models.split(",")
+                 if m.strip()]
+    chain = [settings.gemini_model] + fallbacks
+    if _active_model in chain:  # sticky: the last model that ANSWERED goes first
+        chain.remove(_active_model)
+        chain.insert(0, _active_model)
+    return chain
+
+
+def _is_capacity_error(exc: Exception) -> bool:
+    """429 (quota) / 503 (overloaded): retrying the SAME model is futile —
+    a DIFFERENT model has its own quota bucket and capacity."""
+    text = str(exc)
+    return ("429" in text or "RESOURCE_EXHAUSTED" in text
+            or "503" in text or "UNAVAILABLE" in text)
+
+
+def _gemini_json(prompt: str) -> str:
+    """One Gemini call forcing JSON-mode output — with a MODEL FALLBACK CHAIN.
+
+    Free-tier reality: the newest model is often saturated (503 "high
+    demand") and quotas are PER MODEL. So on capacity errors we walk the
+    chain; other errors (network blips) get one same-model retry. The chain
+    is sticky — once a model answers, it stays first until it fails again.
+    Total Gemini outage still raises — callers have their own fallbacks
+    (Groq for negotiation, neutral verdicts for the judge).
+    """
+    global _active_model
+    chain = _gemini_model_chain()
+    last_exc: Exception | None = None
+    for model in chain:
+        for attempt in range(1, 3):
+            try:
+                response = _get_gemini_client().models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config=genai_types.GenerateContentConfig(
+                        response_mime_type="application/json",
+                        temperature=0.0,
+                    ),
+                )
+                if _active_model != model:
+                    logger.info("gemini: %s answered — chain pinned to it", model)
+                    _active_model = model
+                return response.text or ""
+            except Exception as exc:
+                last_exc = exc
+                if _is_capacity_error(exc):
+                    logger.warning("gemini: %s capacity-limited — next model in chain",
+                                   model)
+                    break
+                if attempt == 2:
+                    break
+                logger.warning("gemini: %s transient error (attempt %d) — retrying: %s",
+                               model, attempt, str(exc)[:80])
+                time.sleep(2.0)
+    assert last_exc is not None
+    raise last_exc
 
 
 def _embed_texts(texts: list[str], task_type: str) -> list[list[float]]:

@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # (Gemini 2.5-flash was retired for new users; the API's 404 message
     # pointed us at 3.6-flash. Models rotate — this knob absorbs that.)
     gemini_model: str = "gemini-3.6-flash"
+    # Capacity failover: on 429/503 we walk this comma-separated chain.
+    # Free-tier quota is PER MODEL, so one saturated model can't take the
+    # whole pipeline down — a slower sibling still answers.
+    gemini_fallback_models: str = "gemini-3.5-flash,gemini-3.1-flash-lite,gemini-2.5-flash"
     # Embeddings power the RAG knowledge base (labeled clauses).
     gemini_embedding_model: str = "gemini-embedding-001"
     # How many similar labeled clauses to retrieve as few-shot exemplars.
